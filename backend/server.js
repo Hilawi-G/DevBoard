@@ -13,9 +13,8 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// ==========================================
-// 1. ROUTE: REGISTER A NEW USER
-// ==========================================
+
+// 1.REGISTER A NEW USER
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -50,9 +49,7 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-// ==========================================
-// 2. ROUTE: LOGIN AN EXISTING USER
-// ==========================================
+// 2.LOGIN AN EXISTING USER
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -90,5 +87,5 @@ app.post('/api/auth/login', async (req, res) => {
 
 // Start the server
 app.listen(PORT, () => {
-  console.log(`🚀 Server running in CommonJS mode on http://localhost:${PORT}`);
+  console.log(`Server running in CommonJS mode on http://localhost:${PORT}`);
 });
