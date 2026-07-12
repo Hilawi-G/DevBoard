@@ -3,23 +3,44 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
-// Temporary placeholder layouts until we build the premium interfaces
-const RegisterPlaceholder = () => <div>Register Screen Coming Next...</div>;
-const LoginPlaceholder = () => <div>Login Screen Coming Next...</div>;
-const DashboardPlaceholder = () => <div>Secure Kanban Board Workspace Coming Soon...</div>;
+// 1. Swap placeholders out for real page modules
+import Register from './pages/Register';
+import Login from './pages/Login';
+
+// Temporary dashboard view layout until we build the complete Kanban grids
+const DashboardPlaceholder = () => (
+  <div className="p-8 text-white">
+    <h1 className="text-2xl font-bold">Secure Kanban Board Workspace</h1>
+    <p className="text-slate-400 mt-2">If you see this page, your JWT lifecycle is running cleanly!</p>
+  </div>
+);
 
 function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/register" element={<RegisterPlaceholder />} />
-          <Route path="/login" element={<LoginPlaceholder />} />
-          <Route path="/dashboard" element={<DashboardPlaceholder />} />
-          <Route path="/" element={<Navigate to="/login" />} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <div className="min-h-screen bg-slate-900 text-slate-100 selection:bg-indigo-500/30">
+          <Routes>
+            {/* Public Gates */}
+            <Route path="/register" element={<Register />} />
+            <Route path="/login" element={<Login />} />
+
+            {/* Protected Workspace Layout */}
+            <Route 
+              path="/dashboard" 
+              element={
+                <ProtectedRoute>
+                  <DashboardPlaceholder />
+                </ProtectedRoute>
+              } 
+            />
+
+            {/* Fallback Catch */}
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
+        </div>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
 
