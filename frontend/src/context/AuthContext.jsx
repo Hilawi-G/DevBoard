@@ -16,21 +16,19 @@ export function AuthProvider({ children }) {
         setLoading(false);
     }, [token]);
 
-    //Login execution handler
-    const Login = (newToken) =>{
+    const login = (newToken) => {
         localStorage.setItem('token', newToken);
         setToken(newToken);
     };
-    
-    //Logout execution handler
-    const Logout= ()=>{
+
+    const logout = () => {
         localStorage.removeItem('token');
         setToken(null);
         setUser(null);
     };
 
     return (
-        <AuthContext.Provider value={{ user, Login, Logout }}>
+        <AuthContext.Provider value={{ user, login, logout }}>
             {!loading && children}
         </AuthContext.Provider>
     );
