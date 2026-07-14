@@ -18,7 +18,7 @@ export default function Login() {
     setError('');
 
     if (!formData.email || !formData.password) {
-      return setError('Please enter both layout credentials.');
+      return setError('Please enter both credentials.');
     }
 
     try {

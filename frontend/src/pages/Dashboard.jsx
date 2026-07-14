@@ -46,7 +46,7 @@ export default function Dashboard() {
   const fetchTasks = async () => {
     try {
       setIsLoading(true);
-      const response = await axios.get('http://127.0.0.1:5000/api/tasks', getHeaders());
+      const response = await axios.get('http://localhost:5000/api/tasks', getHeaders());
       setTasks(response.data);
       setError('');
     } catch (err) {
@@ -63,7 +63,7 @@ export default function Dashboard() {
 
     try {
       const response = await axios.post(
-        'http://127.0.0.1:5000/api/tasks',
+        'http://localhost:5000/api/tasks',
         { title, description },
         getHeaders()
       );
@@ -90,7 +90,7 @@ export default function Dashboard() {
 
     try {
       const response = await axios.put(
-        `http://127.0.0.1:5000/api/tasks/${taskId}`,
+        `http://localhost:5000/api/tasks/${taskId}`,
         { status: newStatus },
         getHeaders()
       );
@@ -106,7 +106,7 @@ export default function Dashboard() {
     if (!window.confirm('Are you sure you want to permanently delete this task?')) return;
 
     try {
-      await axios.delete(`http://127.0.0.1:5000/api/tasks/${taskId}`, getHeaders());
+      await axios.delete(`http://localhost:5000/api/tasks/${taskId}`, getHeaders());
       setTasks(tasks.filter(t => t.id !== taskId));
     } catch (err) {
       handleApiError(err, 'Failed to remove the task.');
@@ -126,32 +126,36 @@ export default function Dashboard() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0C0D0E] text-neutral-400">
-        <p className="animate-pulse text-sm tracking-widest uppercase">Retrieving workspace...</p>
+      <div className="min-h-screen flex items-center justify-center bg-slate-900 text-slate-400 relative">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.08),transparent_60%)] pointer-events-none" />
+        <p className="animate-pulse text-sm tracking-widest uppercase relative z-10">Retrieving workspace...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0C0D0E] text-neutral-100 p-8 font-sans antialiased">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-slate-900 text-slate-100 p-8 font-sans antialiased relative overflow-x-hidden">
+      {/* Background radial glow effect */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.06),transparent_65%)] pointer-events-none" />
+
+      <div className="max-w-7xl mx-auto relative z-10">
         
         {/* Navigation Bar */}
-        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10 pb-6 border-b border-neutral-800">
+        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10 pb-6 border-b border-slate-800/80">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Your Board</h1>
-            <p className="text-sm text-neutral-500">Track and progress tasks dynamically across your team</p>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-100">Your Board</h1>
+            <p className="text-sm text-slate-400">Track and progress tasks dynamically across your team</p>
           </div>
           <div className="flex items-center gap-3 w-full sm:w-auto">
             <button
               onClick={() => setIsCreating(!isCreating)}
-              className="flex-1 sm:flex-none px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm rounded-lg transition-colors shadow-sm shadow-indigo-900/30"
+              className="flex-1 sm:flex-none px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm rounded-lg transition-colors shadow-sm shadow-indigo-900/30 cursor-pointer"
             >
               {isCreating ? 'Cancel' : '＋ New Issue'}
             </button>
             <button
               onClick={handleLogout}
-              className="px-4 py-2 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 font-medium text-sm rounded-lg transition-colors"
+              className="px-4 py-2.5 bg-slate-950/40 hover:bg-slate-800/60 border border-slate-800 text-slate-300 font-medium text-sm rounded-lg transition-colors cursor-pointer"
             >
               Logout
             </button>
@@ -159,39 +163,39 @@ export default function Dashboard() {
         </header>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-950/40 border border-red-900 text-red-400 text-sm rounded-lg">
+          <div className="mb-6 p-4 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm rounded-lg">
             {error}
           </div>
         )}
 
         {/* Task Creator Form (Accordion Slide) */}
         {isCreating && (
-          <form onSubmit={handleCreateTask} className="mb-8 p-6 bg-[#121314] border border-neutral-800 rounded-xl max-w-xl shadow-md">
-            <h3 className="text-base font-semibold mb-4 text-neutral-200">Create a New Issue</h3>
+          <form onSubmit={handleCreateTask} className="mb-8 p-6 bg-slate-800/40 border border-slate-800/80 backdrop-blur-md rounded-2xl max-w-xl shadow-2xl relative z-20">
+            <h3 className="text-base font-bold mb-4 text-slate-100">Create a New Issue</h3>
             <div className="mb-4">
-              <label className="block text-[10px] uppercase tracking-wider font-semibold text-neutral-500 mb-2">Title</label>
+              <label className="block text-[10px] uppercase tracking-wider font-semibold text-slate-400 mb-2">Title</label>
               <input
                 type="text"
                 required
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Database replication strategy..."
-                className="w-full bg-[#18191B] border border-neutral-800 rounded-lg p-3 text-sm text-neutral-200 focus:outline-none focus:border-indigo-500 transition-colors"
+                className="w-full px-4 py-2.5 bg-slate-950/40 border border-slate-800 text-slate-100 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all text-sm placeholder:text-slate-600"
               />
             </div>
             <div className="mb-4">
-              <label className="block text-[10px] uppercase tracking-wider font-semibold text-neutral-500 mb-2">Description (Optional)</label>
+              <label className="block text-[10px] uppercase tracking-wider font-semibold text-slate-400 mb-2">Description (Optional)</label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Analyze master-slave synchronization latencies..."
                 rows="3"
-                className="w-full bg-[#18191B] border border-neutral-800 rounded-lg p-3 text-sm text-neutral-200 focus:outline-none focus:border-indigo-500 transition-colors resize-none"
+                className="w-full px-4 py-2.5 bg-slate-950/40 border border-slate-800 text-slate-100 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all text-sm placeholder:text-slate-600 resize-none"
               />
             </div>
             <button
               type="submit"
-              className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-lg transition-all"
+              className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer"
             >
               Commit to Board
             </button>
@@ -202,40 +206,40 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           
           {/* Column 1: To Do */}
-          <div className="bg-[#121314]/40 border border-neutral-900 rounded-xl p-5 flex flex-col h-[calc(100vh-220px)] min-h-[400px]">
+          <div className="bg-slate-800/20 border border-slate-800/60 backdrop-blur-md rounded-2xl p-5 flex flex-col h-[calc(100vh-220px)] min-h-[400px]">
             <div className="flex justify-between items-center mb-4">
-              <span className="text-sm font-medium text-neutral-300">To Do</span>
-              <span className="px-2.5 py-0.5 bg-neutral-800 text-[10px] font-semibold text-neutral-400 rounded-full">
+              <span className="text-sm font-semibold text-slate-300">To Do</span>
+              <span className="px-2.5 py-0.5 bg-slate-800 text-[10px] font-semibold text-slate-400 rounded-full border border-slate-700/50">
                 {getTasksByColumn('TODO').length}
               </span>
             </div>
-            <div className="space-y-3 overflow-y-auto flex-1 pr-1 custom-scrollbar">
+            <div className="space-y-3 overflow-y-auto flex-1 pr-1 no-scrollbar">
               {getTasksByColumn('TODO').map(task => renderCard(task))}
             </div>
           </div>
 
           {/* Column 2: In Progress */}
-          <div className="bg-[#121314]/40 border border-neutral-900 rounded-xl p-5 flex flex-col h-[calc(100vh-220px)] min-h-[400px]">
+          <div className="bg-slate-800/20 border border-slate-800/60 backdrop-blur-md rounded-2xl p-5 flex flex-col h-[calc(100vh-220px)] min-h-[400px]">
             <div className="flex justify-between items-center mb-4">
-              <span className="text-sm font-medium text-neutral-300">In Progress</span>
-              <span className="px-2.5 py-0.5 bg-neutral-800 text-[10px] font-semibold text-neutral-400 rounded-full">
+              <span className="text-sm font-semibold text-slate-300">In Progress</span>
+              <span className="px-2.5 py-0.5 bg-slate-800 text-[10px] font-semibold text-slate-400 rounded-full border border-slate-700/50">
                 {getTasksByColumn('IN_PROGRESS').length}
               </span>
             </div>
-            <div className="space-y-3 overflow-y-auto flex-1 pr-1 custom-scrollbar">
+            <div className="space-y-3 overflow-y-auto flex-1 pr-1 no-scrollbar">
               {getTasksByColumn('IN_PROGRESS').map(task => renderCard(task))}
             </div>
           </div>
 
           {/* Column 3: Done */}
-          <div className="bg-[#121314]/40 border border-neutral-900 rounded-xl p-5 flex flex-col h-[calc(100vh-220px)] min-h-[400px]">
+          <div className="bg-slate-800/20 border border-slate-800/60 backdrop-blur-md rounded-2xl p-5 flex flex-col h-[calc(100vh-220px)] min-h-[400px]">
             <div className="flex justify-between items-center mb-4">
-              <span className="text-sm font-medium text-neutral-300">Done</span>
-              <span className="px-2.5 py-0.5 bg-neutral-800 text-[10px] font-semibold text-neutral-400 rounded-full">
+              <span className="text-sm font-semibold text-slate-300">Done</span>
+              <span className="px-2.5 py-0.5 bg-slate-800 text-[10px] font-semibold text-slate-400 rounded-full border border-slate-700/50">
                 {getTasksByColumn('DONE').length}
               </span>
             </div>
-            <div className="space-y-3 overflow-y-auto flex-1 pr-1 custom-scrollbar">
+            <div className="space-y-3 overflow-y-auto flex-1 pr-1 no-scrollbar">
               {getTasksByColumn('DONE').map(task => renderCard(task))}
             </div>
           </div>
@@ -250,30 +254,30 @@ export default function Dashboard() {
     return (
       <div
         key={task.id}
-        className="group relative p-4 bg-[#121314] hover:bg-[#161719] border border-neutral-800 hover:border-neutral-700 rounded-xl transition-all shadow-sm"
+        className="group relative p-4 bg-slate-800/40 hover:bg-slate-800/70 border border-slate-800/60 hover:border-indigo-500/50 rounded-xl transition-all shadow-md backdrop-blur-sm"
       >
         <div className="flex justify-between items-start gap-2 mb-2">
-          <h4 className="text-sm font-medium text-neutral-200 line-clamp-2 leading-snug">{task.title}</h4>
+          <h4 className="text-sm font-semibold text-slate-100 line-clamp-2 leading-snug">{task.title}</h4>
           <button
             onClick={() => handleDeleteTask(task.id)}
-            className="text-neutral-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity p-1 text-xs"
+            className="text-slate-500 hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-opacity p-1 text-xs cursor-pointer"
             title="Delete task"
           >
             🗑️
           </button>
         </div>
         {task.description && (
-          <p className="text-xs text-neutral-500 mb-4 line-clamp-3 leading-relaxed">
+          <p className="text-xs text-slate-400 mb-4 line-clamp-3 leading-relaxed">
             {task.description}
           </p>
         )}
 
         {/* Mini Controls to Move Columns Inline */}
-        <div className="flex justify-end gap-1.5 pt-2 border-t border-neutral-800/60 mt-4">
+        <div className="flex justify-end gap-1.5 pt-2 border-t border-slate-800/40 mt-4">
           {task.status !== 'TODO' && (
             <button
               onClick={() => handleUpdateStatus(task.id, task.status, -1)}
-              className="p-1 px-2 text-xs bg-neutral-800 hover:bg-neutral-700 text-neutral-400 rounded transition-colors"
+              className="p-1 px-2 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-slate-100 rounded transition-colors cursor-pointer border border-slate-700/50"
               title="Move left"
             >
               ←
@@ -282,7 +286,7 @@ export default function Dashboard() {
           {task.status !== 'DONE' && (
             <button
               onClick={() => handleUpdateStatus(task.id, task.status, 1)}
-              className="p-1 px-2 text-xs bg-neutral-800 hover:bg-neutral-700 text-neutral-400 rounded transition-colors"
+              className="p-1 px-2 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-slate-100 rounded transition-colors cursor-pointer border border-slate-700/50"
               title="Move right"
             >
               →
