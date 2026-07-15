@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { LayoutDashboard } from 'lucide-react';
+import ThemeToggle from '../components/ThemeToggle';
 
 export default function Login() {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -21,6 +23,11 @@ export default function Login() {
       return setError('Please enter both credentials.');
     }
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      return setError('Please enter a valid email address.');
+    }
+
     try {
       setLoading(true);
       const response = await fetch('http://localhost:5000/api/auth/login', {
@@ -32,13 +39,10 @@ export default function Login() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Login credentials invalid.');
+        throw new Error(data.error || data.message || 'Login credentials invalid.');
       }
 
-      // Fire the global context engine to store token synchronously
       login(data.token);
-      
-      // Push authenticated user into dashboard workspace layout
       navigate('/dashboard');
     } catch (err) {
       setError(err.message);
@@ -48,68 +52,108 @@ export default function Login() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-900 p-4">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.08),transparent_60%)] pointer-events-none" />
+    <div className="min-h-screen flex bg-slate-50 dark:bg-slate-950 transition-colors">
+      
+      {/* Absolute Theme Toggle for the Auth Pages */}
+      <div className="absolute top-4 right-4 z-50">
+        <ThemeToggle />
+      </div>
 
-      <div className="w-full max-w-md bg-slate-800/40 border border-slate-800/80 backdrop-blur-md rounded-2xl p-8 shadow-2xl relative z-10">
-        <div className="text-center mb-8">
-          <h2 className="text-2xl font-bold tracking-tight text-slate-100">Welcome back</h2>
-          <p className="text-sm text-slate-400 mt-2">Log in to manage your engineering board</p>
-        </div>
-
-        {error && (
-          <div className="mb-6 p-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm rounded-lg">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="block text-xs font-medium uppercase tracking-wider text-slate-400 mb-2">
-              Email Address
-            </label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="name@example.com"
-              className="w-full px-4 py-2.5 bg-slate-950/40 border border-slate-800 text-slate-100 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all text-sm placeholder:text-slate-600"
-            />
+      {/* Left Column: The Form */}
+      <div className="flex-1 flex items-center justify-center p-8 lg:p-12 z-10 relative">
+        <div className="w-full max-w-md bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 backdrop-blur-xl rounded-2xl p-8 shadow-2xl transition-colors">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Welcome back</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Log in to manage your engineering board</p>
           </div>
 
-          <div>
-            <label className="block text-xs font-medium uppercase tracking-wider text-slate-400 mb-2">
-              Password
-            </label>
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              placeholder="••••••••"
-              className="w-full px-4 py-2.5 bg-slate-950/40 border border-slate-800 text-slate-100 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all text-sm placeholder:text-slate-600"
-            />
+          {error && (
+            <div className="mb-6 p-3 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-600 dark:text-rose-400 text-sm rounded-lg transition-colors">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
+                Email Address
+              </label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="name@example.com"
+                className="w-full px-4 py-2.5 bg-slate-100 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all text-sm placeholder:text-slate-400 dark:placeholder:text-slate-600"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
+                Password
+              </label>
+              <input
+                type="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="••••••••"
+                className="w-full px-4 py-2.5 bg-slate-100 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all text-sm placeholder:text-slate-400 dark:placeholder:text-slate-600"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-600/50 text-white font-medium rounded-lg text-sm transition-colors cursor-pointer flex justify-center items-center shadow-lg shadow-indigo-500/25"
+            >
+              {loading ? 'Verifying pass...' : 'Log in'}
+            </button>
+          </form>
+
+          <div className="text-center mt-8 pt-6 border-t border-slate-200 dark:border-slate-800/60 transition-colors">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              New to DevBoard?{' '}
+              <Link to="/register" className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-semibold transition-colors">
+                Sign up
+              </Link>
+            </p>
           </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-600/50 text-white font-medium rounded-lg text-sm transition-colors cursor-pointer flex justify-center items-center"
-          >
-            {loading ? 'Verifying pass...' : 'Log in'}
-          </button>
-        </form>
-
-        <div className="text-center mt-6 pt-6 border-t border-slate-800/60">
-          <p className="text-xs text-slate-400">
-            New to DevBoard?{' '}
-            <Link to="/register" className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors">
-              Sign up
-            </Link>
-          </p>
         </div>
       </div>
+
+      {/* Right Column: Welcome Banner / Intro (Hidden on smaller screens) */}
+      <div className="hidden lg:flex lg:flex-1 relative overflow-hidden bg-indigo-900">
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 to-purple-900 opacity-90 z-0"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.15),transparent_50%)] z-10"></div>
+        
+        <div className="relative z-20 flex flex-col justify-center items-start p-16 w-full h-full text-white">
+          <div className="p-4 bg-white/10 backdrop-blur-md rounded-2xl mb-8 border border-white/20">
+             <LayoutDashboard className="w-12 h-12 text-white" />
+          </div>
+          <h1 className="text-5xl font-extrabold tracking-tight mb-6 leading-tight">
+            Welcome to DevBoard!
+          </h1>
+          <p className="text-xl text-indigo-100 max-w-lg leading-relaxed mb-8">
+            The cleanest, most intuitive way to track your engineering tasks. Stay organized, stay productive, and ship faster.
+          </p>
+          
+          <div className="flex gap-4">
+             <div className="flex -space-x-4">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="w-10 h-10 rounded-full border-2 border-indigo-500 bg-indigo-200 flex items-center justify-center overflow-hidden">
+                     <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${i}&backgroundColor=e2e8f0`} alt="Avatar" className="w-full h-full" />
+                  </div>
+                ))}
+             </div>
+             <div className="flex flex-col justify-center">
+                <span className="text-sm font-bold">Join 10,000+ developers</span>
+                <span className="text-xs text-indigo-200">who improved their workflow.</span>
+             </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   );
 }

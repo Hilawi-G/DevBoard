@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { Pencil, Trash2, GripVertical } from 'lucide-react';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import ThemeToggle from '../components/ThemeToggle';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -13,28 +16,29 @@ export default function Dashboard() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
 
+  // Form states for editing an existing task
+  const [editingTask, setEditingTask] = useState(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+
   // 1. Secure Route Guard & Fetch Tasks on Mount
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
-      // If no token exists, immediately redirect to login page
       navigate('/login');
       return;
     }
     fetchTasks();
   }, [navigate]);
 
-  // Helper to generate auth headers dynamically
   const getHeaders = () => {
     const token = localStorage.getItem('token');
     return { headers: { Authorization: `Bearer ${token}` } };
   };
 
-  // Helper to handle API and unauthorized (401) errors gracefully
   const handleApiError = (err, defaultMsg) => {
     console.error(err);
     if (err.response && err.response.status === 401) {
-      // Token has expired or is invalid -> wipe local credentials and redirect
       localStorage.removeItem('token');
       navigate('/login');
     } else {
@@ -47,7 +51,9 @@ export default function Dashboard() {
     try {
       setIsLoading(true);
       const response = await axios.get('http://localhost:5000/api/tasks', getHeaders());
-      setTasks(response.data);
+      // Sort tasks safely by id so they don't randomly shuffle (unless you implement full reordering logic)
+      const sorted = response.data.sort((a, b) => a.id - b.id);
+      setTasks(sorted);
       setError('');
     } catch (err) {
       handleApiError(err, 'Failed to fetch tasks from server.');
@@ -67,7 +73,6 @@ export default function Dashboard() {
         { title, description },
         getHeaders()
       );
-      // Update local array state with the new database entry
       setTasks([...tasks, response.data]);
       setTitle('');
       setDescription('');
@@ -78,26 +83,40 @@ export default function Dashboard() {
     }
   };
 
-  // 4. UPDATE: Transition status (To Do ⇄ In Progress ⇄ Done)
-  const handleUpdateStatus = async (taskId, currentStatus, direction) => {
-    const statuses = ['TODO', 'IN_PROGRESS', 'DONE'];
-    const currentIndex = statuses.indexOf(currentStatus);
+  // 4. UPDATE STATUS VIA DRAG & DROP
+  const onDragEnd = async (result) => {
+    const { destination, source, draggableId } = result;
+
+    if (!destination) return;
+    if (destination.droppableId === source.droppableId && destination.index === source.index) return;
+
+    // Optimistically update the state
+    const taskId = parseInt(draggableId, 10);
+    const newStatus = destination.droppableId;
     
-    let newIndex = currentIndex + direction;
-    if (newIndex < 0 || newIndex >= statuses.length) return; // Boundary lock
+    // Create new array with updated status
+    const newTasks = tasks.map(t => {
+      if (t.id === taskId) {
+        return { ...t, status: newStatus };
+      }
+      return t;
+    });
 
-    const newStatus = statuses[newIndex];
+    setTasks(newTasks);
 
-    try {
-      const response = await axios.put(
-        `http://localhost:5000/api/tasks/${taskId}`,
-        { status: newStatus },
-        getHeaders()
-      );
-      // Map across state to update visual position instantly
-      setTasks(tasks.map(t => (t.id === taskId ? response.data : t)));
-    } catch (err) {
-      handleApiError(err, 'Failed to update task state.');
+    // Call API to persist
+    if (source.droppableId !== destination.droppableId) {
+      try {
+        await axios.put(
+          `http://localhost:5000/api/tasks/${taskId}`,
+          { status: newStatus },
+          getHeaders()
+        );
+      } catch (err) {
+        handleApiError(err, 'Failed to update task state.');
+        // Revert on failure
+        fetchTasks();
+      }
     }
   };
 
@@ -113,49 +132,73 @@ export default function Dashboard() {
     }
   };
 
+  // 5b. EDIT: Trigger editing modal and save changes
+  const startEditing = (task) => {
+    setEditingTask(task);
+    setEditTitle(task.title);
+    setEditDescription(task.description || '');
+  };
+
+  const handleEditTask = async (e) => {
+    e.preventDefault();
+    if (!editTitle.trim()) return;
+
+    try {
+      const response = await axios.put(
+        `http://localhost:5000/api/tasks/${editingTask.id}`,
+        { title: editTitle, description: editDescription },
+        getHeaders()
+      );
+      setTasks(tasks.map(t => (t.id === editingTask.id ? response.data : t)));
+      setEditingTask(null);
+      setEditTitle('');
+      setEditDescription('');
+      setError('');
+    } catch (err) {
+      handleApiError(err, 'Failed to update the task.');
+    }
+  };
+
   // 6. LOGOUT: Wipe security token and redirect
   const handleLogout = () => {
     localStorage.removeItem('token');
     navigate('/login');
   };
 
-  // Organize tasks by column criteria
   const getTasksByColumn = (columnStatus) => {
     return tasks.filter(task => task.status === columnStatus);
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900 text-slate-400 relative">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.08),transparent_60%)] pointer-events-none" />
-        <p className="animate-pulse text-sm tracking-widest uppercase relative z-10">Retrieving workspace...</p>
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 relative transition-colors">
+        <p className="animate-pulse text-sm tracking-widest uppercase relative z-10 font-bold">Retrieving workspace...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 p-8 font-sans antialiased relative overflow-x-hidden">
-      {/* Background radial glow effect */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.06),transparent_65%)] pointer-events-none" />
-
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 p-4 sm:p-8 font-sans antialiased relative overflow-x-hidden transition-colors">
+      
       <div className="max-w-7xl mx-auto relative z-10">
         
         {/* Navigation Bar */}
-        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10 pb-6 border-b border-slate-800/80">
+        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10 pb-6 border-b border-slate-200 dark:border-slate-800/80 transition-colors">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-100">Your Board</h1>
-            <p className="text-sm text-slate-400">Track and progress tasks dynamically across your team</p>
+            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">Your Board</h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Track and progress tasks dynamically across your team</p>
           </div>
           <div className="flex items-center gap-3 w-full sm:w-auto">
             <button
               onClick={() => setIsCreating(!isCreating)}
-              className="flex-1 sm:flex-none px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm rounded-lg transition-colors shadow-sm shadow-indigo-900/30 cursor-pointer"
+              className="flex-1 sm:flex-none px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm rounded-lg transition-colors shadow-sm shadow-indigo-500/20 cursor-pointer"
             >
               {isCreating ? 'Cancel' : '＋ New Issue'}
             </button>
+            <ThemeToggle />
             <button
               onClick={handleLogout}
-              className="px-4 py-2.5 bg-slate-950/40 hover:bg-slate-800/60 border border-slate-800 text-slate-300 font-medium text-sm rounded-lg transition-colors cursor-pointer"
+              className="px-4 py-2 bg-white dark:bg-slate-900/40 hover:bg-slate-100 dark:hover:bg-slate-800/60 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 font-medium text-sm rounded-lg transition-colors cursor-pointer"
             >
               Logout
             </button>
@@ -163,34 +206,34 @@ export default function Dashboard() {
         </header>
 
         {error && (
-          <div className="mb-6 p-4 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm rounded-lg">
+          <div className="mb-6 p-4 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-600 dark:text-rose-400 text-sm rounded-lg transition-colors">
             {error}
           </div>
         )}
 
-        {/* Task Creator Form (Accordion Slide) */}
+        {/* Task Creator Form */}
         {isCreating && (
-          <form onSubmit={handleCreateTask} className="mb-8 p-6 bg-slate-800/40 border border-slate-800/80 backdrop-blur-md rounded-2xl max-w-xl shadow-2xl relative z-20">
-            <h3 className="text-base font-bold mb-4 text-slate-100">Create a New Issue</h3>
+          <form onSubmit={handleCreateTask} className="mb-8 p-6 bg-white/80 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 backdrop-blur-md rounded-2xl max-w-xl shadow-lg transition-colors">
+            <h3 className="text-base font-bold mb-4 text-slate-900 dark:text-slate-100">Create a New Issue</h3>
             <div className="mb-4">
-              <label className="block text-[10px] uppercase tracking-wider font-semibold text-slate-400 mb-2">Title</label>
+              <label className="block text-[10px] uppercase tracking-wider font-semibold text-slate-500 dark:text-slate-400 mb-2">Title</label>
               <input
                 type="text"
                 required
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Database replication strategy..."
-                className="w-full px-4 py-2.5 bg-slate-950/40 border border-slate-800 text-slate-100 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all text-sm placeholder:text-slate-600"
+                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all text-sm placeholder:text-slate-400 dark:placeholder:text-slate-600"
               />
             </div>
             <div className="mb-4">
-              <label className="block text-[10px] uppercase tracking-wider font-semibold text-slate-400 mb-2">Description (Optional)</label>
+              <label className="block text-[10px] uppercase tracking-wider font-semibold text-slate-500 dark:text-slate-400 mb-2">Description (Optional)</label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Analyze master-slave synchronization latencies..."
                 rows="3"
-                className="w-full px-4 py-2.5 bg-slate-950/40 border border-slate-800 text-slate-100 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all text-sm placeholder:text-slate-600 resize-none"
+                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all text-sm placeholder:text-slate-400 dark:placeholder:text-slate-600 resize-none"
               />
             </div>
             <button
@@ -202,98 +245,175 @@ export default function Dashboard() {
           </form>
         )}
 
-        {/* 3-Column Kanban Board Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          
-          {/* Column 1: To Do */}
-          <div className="bg-slate-800/20 border border-slate-800/60 backdrop-blur-md rounded-2xl p-5 flex flex-col h-[calc(100vh-220px)] min-h-[400px]">
-            <div className="flex justify-between items-center mb-4">
-              <span className="text-sm font-semibold text-slate-300">To Do</span>
-              <span className="px-2.5 py-0.5 bg-slate-800 text-[10px] font-semibold text-slate-400 rounded-full border border-slate-700/50">
-                {getTasksByColumn('TODO').length}
-              </span>
-            </div>
-            <div className="space-y-3 overflow-y-auto flex-1 pr-1 no-scrollbar">
-              {getTasksByColumn('TODO').map(task => renderCard(task))}
-            </div>
-          </div>
+        {/* 3-Column Kanban Board Grid with DragDropContext */}
+        <DragDropContext onDragEnd={onDragEnd}>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            
+            {/* Column 1: To Do */}
+            <Droppable droppableId="TODO">
+              {(provided, snapshot) => (
+                <div 
+                  ref={provided.innerRef} 
+                  {...provided.droppableProps}
+                  className={`border backdrop-blur-md rounded-2xl p-5 flex flex-col h-[calc(100vh-250px)] min-h-[400px] transition-colors ${
+                    snapshot.isDraggingOver ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700' : 'bg-blue-50/70 dark:bg-blue-900/10 border-blue-200/60 dark:border-blue-800/40'
+                  }`}
+                >
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="text-sm font-bold text-blue-900 dark:text-blue-300">To Do</span>
+                    <span className="px-2.5 py-0.5 bg-white dark:bg-blue-950/50 text-[10px] font-bold text-blue-600 dark:text-blue-400 rounded-full border border-blue-200 dark:border-blue-800/50 shadow-sm">
+                      {getTasksByColumn('TODO').length}
+                    </span>
+                  </div>
+                  <div className="space-y-3 overflow-y-auto flex-1 pr-1 no-scrollbar">
+                    {getTasksByColumn('TODO').map((task, index) => renderCard(task, index))}
+                    {provided.placeholder}
+                  </div>
+                </div>
+              )}
+            </Droppable>
 
-          {/* Column 2: In Progress */}
-          <div className="bg-slate-800/20 border border-slate-800/60 backdrop-blur-md rounded-2xl p-5 flex flex-col h-[calc(100vh-220px)] min-h-[400px]">
-            <div className="flex justify-between items-center mb-4">
-              <span className="text-sm font-semibold text-slate-300">In Progress</span>
-              <span className="px-2.5 py-0.5 bg-slate-800 text-[10px] font-semibold text-slate-400 rounded-full border border-slate-700/50">
-                {getTasksByColumn('IN_PROGRESS').length}
-              </span>
-            </div>
-            <div className="space-y-3 overflow-y-auto flex-1 pr-1 no-scrollbar">
-              {getTasksByColumn('IN_PROGRESS').map(task => renderCard(task))}
-            </div>
-          </div>
+            {/* Column 2: In Progress */}
+            <Droppable droppableId="IN_PROGRESS">
+              {(provided, snapshot) => (
+                <div 
+                  ref={provided.innerRef} 
+                  {...provided.droppableProps}
+                  className={`border backdrop-blur-md rounded-2xl p-5 flex flex-col h-[calc(100vh-250px)] min-h-[400px] transition-colors ${
+                    snapshot.isDraggingOver ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-300 dark:border-amber-700' : 'bg-amber-50/70 dark:bg-amber-900/10 border-amber-200/60 dark:border-amber-800/40'
+                  }`}
+                >
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="text-sm font-bold text-amber-900 dark:text-amber-300">In Progress</span>
+                    <span className="px-2.5 py-0.5 bg-white dark:bg-amber-950/50 text-[10px] font-bold text-amber-600 dark:text-amber-400 rounded-full border border-amber-200 dark:border-amber-800/50 shadow-sm">
+                      {getTasksByColumn('IN_PROGRESS').length}
+                    </span>
+                  </div>
+                  <div className="space-y-3 overflow-y-auto flex-1 pr-1 no-scrollbar">
+                    {getTasksByColumn('IN_PROGRESS').map((task, index) => renderCard(task, index))}
+                    {provided.placeholder}
+                  </div>
+                </div>
+              )}
+            </Droppable>
 
-          {/* Column 3: Done */}
-          <div className="bg-slate-800/20 border border-slate-800/60 backdrop-blur-md rounded-2xl p-5 flex flex-col h-[calc(100vh-220px)] min-h-[400px]">
-            <div className="flex justify-between items-center mb-4">
-              <span className="text-sm font-semibold text-slate-300">Done</span>
-              <span className="px-2.5 py-0.5 bg-slate-800 text-[10px] font-semibold text-slate-400 rounded-full border border-slate-700/50">
-                {getTasksByColumn('DONE').length}
-              </span>
-            </div>
-            <div className="space-y-3 overflow-y-auto flex-1 pr-1 no-scrollbar">
-              {getTasksByColumn('DONE').map(task => renderCard(task))}
-            </div>
-          </div>
+            {/* Column 3: Done */}
+            <Droppable droppableId="DONE">
+              {(provided, snapshot) => (
+                <div 
+                  ref={provided.innerRef} 
+                  {...provided.droppableProps}
+                  className={`border backdrop-blur-md rounded-2xl p-5 flex flex-col h-[calc(100vh-250px)] min-h-[400px] transition-colors ${
+                    snapshot.isDraggingOver ? 'bg-emerald-100 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-700' : 'bg-emerald-50/70 dark:bg-emerald-900/10 border-emerald-200/60 dark:border-emerald-800/40'
+                  }`}
+                >
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="text-sm font-bold text-emerald-900 dark:text-emerald-300">Done</span>
+                    <span className="px-2.5 py-0.5 bg-white dark:bg-emerald-950/50 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 rounded-full border border-emerald-200 dark:border-emerald-800/50 shadow-sm">
+                      {getTasksByColumn('DONE').length}
+                    </span>
+                  </div>
+                  <div className="space-y-3 overflow-y-auto flex-1 pr-1 no-scrollbar">
+                    {getTasksByColumn('DONE').map((task, index) => renderCard(task, index))}
+                    {provided.placeholder}
+                  </div>
+                </div>
+              )}
+            </Droppable>
 
-        </div>
+          </div>
+        </DragDropContext>
       </div>
+
+      {/* Task Editor Modal */}
+      {editingTask && (
+        <div className="fixed inset-0 bg-slate-900/40 dark:bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="w-full max-w-lg bg-white dark:bg-slate-900/95 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-6 shadow-2xl relative transition-colors">
+            <h3 className="text-lg font-bold mb-4 text-slate-900 dark:text-slate-100">Edit Task</h3>
+            <form onSubmit={handleEditTask} className="space-y-4">
+              <div>
+                <label className="block text-[10px] uppercase tracking-wider font-semibold text-slate-500 dark:text-slate-400 mb-2">Title</label>
+                <input
+                  type="text"
+                  required
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] uppercase tracking-wider font-semibold text-slate-500 dark:text-slate-400 mb-2">Description (Optional)</label>
+                <textarea
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  rows="3"
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all text-sm resize-none"
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingTask(null)}
+                  className="px-4 py-2 bg-slate-100 dark:bg-slate-950/40 hover:bg-slate-200 dark:hover:bg-slate-800/60 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 text-sm font-semibold rounded-lg transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 
-  // Card Rendering Helper Function
-  function renderCard(task) {
+  function renderCard(task, index) {
     return (
-      <div
-        key={task.id}
-        className="group relative p-4 bg-slate-800/40 hover:bg-slate-800/70 border border-slate-800/60 hover:border-indigo-500/50 rounded-xl transition-all shadow-md backdrop-blur-sm"
-      >
-        <div className="flex justify-between items-start gap-2 mb-2">
-          <h4 className="text-sm font-semibold text-slate-100 line-clamp-2 leading-snug">{task.title}</h4>
-          <button
-            onClick={() => handleDeleteTask(task.id)}
-            className="text-slate-500 hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-opacity p-1 text-xs cursor-pointer"
-            title="Delete task"
+      <Draggable key={task.id} draggableId={task.id.toString()} index={index}>
+        {(provided, snapshot) => (
+          <div
+            ref={provided.innerRef}
+            {...provided.draggableProps}
+            {...provided.dragHandleProps}
+            className={`group relative p-4 bg-white dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/60 rounded-xl transition-shadow shadow-sm dark:shadow-none hover:border-indigo-300 dark:hover:border-indigo-500/50 ${
+              snapshot.isDragging ? 'shadow-xl ring-2 ring-indigo-500/50 scale-105 opacity-90 z-50' : ''
+            }`}
           >
-            🗑️
-          </button>
-        </div>
-        {task.description && (
-          <p className="text-xs text-slate-400 mb-4 line-clamp-3 leading-relaxed">
-            {task.description}
-          </p>
+            <div className="flex justify-between items-start gap-2 mb-2">
+              <div className="flex gap-2 items-start flex-1">
+                <GripVertical className="w-4 h-4 text-slate-300 dark:text-slate-500 mt-0.5 cursor-grab active:cursor-grabbing flex-shrink-0" />
+                <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100 line-clamp-2 leading-snug">{task.title}</h4>
+              </div>
+              <div className="flex gap-1 flex-shrink-0">
+                <button
+                  onClick={() => startEditing(task)}
+                  className="text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity p-1 text-xs cursor-pointer"
+                  title="Edit task"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => handleDeleteTask(task.id)}
+                  className="text-slate-400 dark:text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-opacity p-1 text-xs cursor-pointer"
+                  title="Delete task"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+            {task.description && (
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-2 line-clamp-3 leading-relaxed pl-6">
+                {task.description}
+              </p>
+            )}
+          </div>
         )}
-
-        {/* Mini Controls to Move Columns Inline */}
-        <div className="flex justify-end gap-1.5 pt-2 border-t border-slate-800/40 mt-4">
-          {task.status !== 'TODO' && (
-            <button
-              onClick={() => handleUpdateStatus(task.id, task.status, -1)}
-              className="p-1 px-2 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-slate-100 rounded transition-colors cursor-pointer border border-slate-700/50"
-              title="Move left"
-            >
-              ←
-            </button>
-          )}
-          {task.status !== 'DONE' && (
-            <button
-              onClick={() => handleUpdateStatus(task.id, task.status, 1)}
-              className="p-1 px-2 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-slate-100 rounded transition-colors cursor-pointer border border-slate-700/50"
-              title="Move right"
-            >
-              →
-            </button>
-          )}
-        </div>
-      </div>
+      </Draggable>
     );
   }
 }
