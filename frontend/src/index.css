@@ -1,6 +1,12 @@
 @import "tailwindcss";
-@custom-variant dark (&:where(.dark, .dark *));
 
+@theme {
+  --color-gunmetal: #393e41;
+  --color-dusty-denim: #6290c3;
+  --color-ocean-mist: #45b69c;
+}
+
+@custom-variant dark (&:where(.dark, .dark *));
 
 @utility no-scrollbar {
   -ms-overflow-style: none;  /* IE and Edge */

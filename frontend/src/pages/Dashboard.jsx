@@ -171,34 +171,34 @@ export default function Dashboard() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 relative transition-colors">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-gunmetal text-slate-500 dark:text-slate-400 relative transition-colors">
         <p className="animate-pulse text-sm tracking-widest uppercase relative z-10 font-bold">Retrieving workspace...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 p-4 sm:p-8 font-sans antialiased relative overflow-x-hidden transition-colors">
+    <div className="min-h-screen bg-slate-50 dark:bg-gunmetal text-slate-900 dark:text-white p-4 sm:p-8 font-sans antialiased relative overflow-x-hidden transition-colors">
       
       <div className="max-w-7xl mx-auto relative z-10">
         
         {/* Navigation Bar */}
-        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10 pb-6 border-b border-slate-200 dark:border-slate-800/80 transition-colors">
+        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10 pb-6 border-b border-slate-200 dark:border-slate-600 transition-colors">
           <div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">Your Board</h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Track and progress tasks dynamically across your team</p>
+            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">Your Board</h1>
+            <p className="text-sm text-slate-500 dark:text-slate-300 mt-1">Track and progress tasks dynamically across your team</p>
           </div>
           <div className="flex items-center gap-3 w-full sm:w-auto">
             <button
               onClick={() => setIsCreating(!isCreating)}
-              className="flex-1 sm:flex-none px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm rounded-lg transition-colors shadow-sm shadow-indigo-500/20 cursor-pointer"
+              className="flex-1 sm:flex-none px-4 py-2 bg-dusty-denim hover:bg-ocean-mist text-white font-medium text-sm rounded-lg transition-colors shadow-sm cursor-pointer"
             >
               {isCreating ? 'Cancel' : '＋ New Issue'}
             </button>
             <ThemeToggle />
             <button
               onClick={handleLogout}
-              className="px-4 py-2 bg-white dark:bg-slate-900/40 hover:bg-slate-100 dark:hover:bg-slate-800/60 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 font-medium text-sm rounded-lg transition-colors cursor-pointer"
+              className="px-4 py-2 bg-white dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-600/50 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-200 font-medium text-sm rounded-lg transition-colors cursor-pointer"
             >
               Logout
             </button>
@@ -213,32 +213,32 @@ export default function Dashboard() {
 
         {/* Task Creator Form */}
         {isCreating && (
-          <form onSubmit={handleCreateTask} className="mb-8 p-6 bg-white/80 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 backdrop-blur-md rounded-2xl max-w-xl shadow-lg transition-colors">
-            <h3 className="text-base font-bold mb-4 text-slate-900 dark:text-slate-100">Create a New Issue</h3>
+          <form onSubmit={handleCreateTask} className="mb-8 p-6 bg-white/80 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 backdrop-blur-md rounded-2xl max-w-xl shadow-lg transition-colors">
+            <h3 className="text-base font-bold mb-4 text-slate-900 dark:text-white">Create a New Issue</h3>
             <div className="mb-4">
-              <label className="block text-[10px] uppercase tracking-wider font-semibold text-slate-500 dark:text-slate-400 mb-2">Title</label>
+              <label className="block text-[10px] uppercase tracking-wider font-semibold text-slate-500 dark:text-slate-300 mb-2">Title</label>
               <input
                 type="text"
                 required
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Database replication strategy..."
-                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all text-sm placeholder:text-slate-400 dark:placeholder:text-slate-600"
+                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-gunmetal border border-slate-200 dark:border-slate-600 text-slate-900 dark:text-white rounded-lg focus:outline-none focus:border-dusty-denim focus:ring-1 focus:ring-dusty-denim/30 transition-all text-sm placeholder:text-slate-400 dark:placeholder:text-slate-400"
               />
             </div>
             <div className="mb-4">
-              <label className="block text-[10px] uppercase tracking-wider font-semibold text-slate-500 dark:text-slate-400 mb-2">Description (Optional)</label>
+              <label className="block text-[10px] uppercase tracking-wider font-semibold text-slate-500 dark:text-slate-300 mb-2">Description (Optional)</label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Analyze master-slave synchronization latencies..."
                 rows="3"
-                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all text-sm placeholder:text-slate-400 dark:placeholder:text-slate-600 resize-none"
+                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-gunmetal border border-slate-200 dark:border-slate-600 text-slate-900 dark:text-white rounded-lg focus:outline-none focus:border-dusty-denim focus:ring-1 focus:ring-dusty-denim/30 transition-all text-sm placeholder:text-slate-400 dark:placeholder:text-slate-400 resize-none"
               />
             </div>
             <button
               type="submit"
-              className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer"
+              className="w-full py-2.5 bg-dusty-denim hover:bg-ocean-mist text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer"
             >
               Commit to Board
             </button>
@@ -255,7 +255,7 @@ export default function Dashboard() {
                 <div 
                   ref={provided.innerRef} 
                   {...provided.droppableProps}
-                  className={`border backdrop-blur-md rounded-2xl p-5 flex flex-col h-[calc(100vh-250px)] min-h-[400px] transition-colors ${
+                  className={`border rounded-2xl p-5 flex flex-col h-[calc(100vh-250px)] min-h-[400px] transition-colors ${
                     snapshot.isDraggingOver ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700' : 'bg-blue-50/70 dark:bg-blue-900/10 border-blue-200/60 dark:border-blue-800/40'
                   }`}
                 >
@@ -279,7 +279,7 @@ export default function Dashboard() {
                 <div 
                   ref={provided.innerRef} 
                   {...provided.droppableProps}
-                  className={`border backdrop-blur-md rounded-2xl p-5 flex flex-col h-[calc(100vh-250px)] min-h-[400px] transition-colors ${
+                  className={`border rounded-2xl p-5 flex flex-col h-[calc(100vh-250px)] min-h-[400px] transition-colors ${
                     snapshot.isDraggingOver ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-300 dark:border-amber-700' : 'bg-amber-50/70 dark:bg-amber-900/10 border-amber-200/60 dark:border-amber-800/40'
                   }`}
                 >
@@ -303,7 +303,7 @@ export default function Dashboard() {
                 <div 
                   ref={provided.innerRef} 
                   {...provided.droppableProps}
-                  className={`border backdrop-blur-md rounded-2xl p-5 flex flex-col h-[calc(100vh-250px)] min-h-[400px] transition-colors ${
+                  className={`border rounded-2xl p-5 flex flex-col h-[calc(100vh-250px)] min-h-[400px] transition-colors ${
                     snapshot.isDraggingOver ? 'bg-emerald-100 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-700' : 'bg-emerald-50/70 dark:bg-emerald-900/10 border-emerald-200/60 dark:border-emerald-800/40'
                   }`}
                 >
@@ -327,9 +327,9 @@ export default function Dashboard() {
 
       {/* Task Editor Modal */}
       {editingTask && (
-        <div className="fixed inset-0 bg-slate-900/40 dark:bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="w-full max-w-lg bg-white dark:bg-slate-900/95 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-6 shadow-2xl relative transition-colors">
-            <h3 className="text-lg font-bold mb-4 text-slate-900 dark:text-slate-100">Edit Task</h3>
+        <div className="fixed inset-0 bg-slate-900/40 dark:bg-gunmetal/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="w-full max-w-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-2xl p-6 shadow-2xl relative transition-colors">
+            <h3 className="text-lg font-bold mb-4 text-slate-900 dark:text-white">Edit Task</h3>
             <form onSubmit={handleEditTask} className="space-y-4">
               <div>
                 <label className="block text-[10px] uppercase tracking-wider font-semibold text-slate-500 dark:text-slate-400 mb-2">Title</label>
@@ -338,7 +338,7 @@ export default function Dashboard() {
                   required
                   value={editTitle}
                   onChange={(e) => setEditTitle(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all text-sm"
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-gunmetal border border-slate-200 dark:border-slate-600 text-slate-900 dark:text-white rounded-lg focus:outline-none focus:border-dusty-denim focus:ring-1 focus:ring-dusty-denim/30 transition-all text-sm"
                 />
               </div>
               <div>
@@ -347,20 +347,20 @@ export default function Dashboard() {
                   value={editDescription}
                   onChange={(e) => setEditDescription(e.target.value)}
                   rows="3"
-                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all text-sm resize-none"
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-gunmetal border border-slate-200 dark:border-slate-600 text-slate-900 dark:text-white rounded-lg focus:outline-none focus:border-dusty-denim focus:ring-1 focus:ring-dusty-denim/30 transition-all text-sm resize-none"
                 />
               </div>
               <div className="flex justify-end gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setEditingTask(null)}
-                  className="px-4 py-2 bg-slate-100 dark:bg-slate-950/40 hover:bg-slate-200 dark:hover:bg-slate-800/60 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 text-sm font-semibold rounded-lg transition-colors cursor-pointer"
+                  className="px-4 py-2 bg-slate-100 dark:bg-slate-700/50 hover:bg-slate-200 dark:hover:bg-slate-600/50 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-200 text-sm font-semibold rounded-lg transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer"
+                  className="px-4 py-2 bg-dusty-denim hover:bg-ocean-mist text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer"
                 >
                   Save Changes
                 </button>
@@ -380,26 +380,26 @@ export default function Dashboard() {
             ref={provided.innerRef}
             {...provided.draggableProps}
             {...provided.dragHandleProps}
-            className={`group relative p-4 bg-white dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/60 rounded-xl transition-shadow shadow-sm dark:shadow-none hover:border-indigo-300 dark:hover:border-indigo-500/50 ${
-              snapshot.isDragging ? 'shadow-xl ring-2 ring-indigo-500/50 scale-105 opacity-90 z-50' : ''
+            className={`group relative p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl transition-shadow shadow-sm dark:shadow-md hover:border-dusty-denim/50 dark:hover:border-dusty-denim/50 ${
+              snapshot.isDragging ? 'shadow-xl ring-2 ring-dusty-denim/50 scale-105 opacity-90 z-50' : ''
             }`}
           >
             <div className="flex justify-between items-start gap-2 mb-2">
               <div className="flex gap-2 items-start flex-1">
                 <GripVertical className="w-4 h-4 text-slate-300 dark:text-slate-500 mt-0.5 cursor-grab active:cursor-grabbing flex-shrink-0" />
-                <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100 line-clamp-2 leading-snug">{task.title}</h4>
+                <h4 className="text-sm font-semibold text-slate-900 dark:text-white line-clamp-2 leading-snug">{task.title}</h4>
               </div>
               <div className="flex gap-1 flex-shrink-0">
                 <button
                   onClick={() => startEditing(task)}
-                  className="text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity p-1 text-xs cursor-pointer"
+                  className="text-slate-400 dark:text-slate-400 hover:text-dusty-denim dark:hover:text-dusty-denim opacity-0 group-hover:opacity-100 transition-opacity p-1 text-xs cursor-pointer"
                   title="Edit task"
                 >
                   <Pencil className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={() => handleDeleteTask(task.id)}
-                  className="text-slate-400 dark:text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-opacity p-1 text-xs cursor-pointer"
+                  className="text-slate-400 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-opacity p-1 text-xs cursor-pointer"
                   title="Delete task"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -407,7 +407,7 @@ export default function Dashboard() {
               </div>
             </div>
             {task.description && (
-              <p className="text-xs text-slate-500 dark:text-slate-400 mb-2 line-clamp-3 leading-relaxed pl-6">
+              <p className="text-xs text-slate-500 dark:text-slate-300 mb-2 line-clamp-3 leading-relaxed pl-6">
                 {task.description}
               </p>
             )}
