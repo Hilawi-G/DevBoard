@@ -54,11 +54,56 @@ const authenticateToken = (req, res, next) => {
 
   jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
     if (err) {
-      return res.status(403).json({ error: 'Invalid or expired token' });
+      return res.status(401).json({ error: 'Invalid or expired token' });
     }
     req.user = user;
     next();
   });
+};
+
+// --- Request Validation Middlewares ---
+
+const validateAuthPayload = (req, res, next) => {
+  const { email, password } = req.body;
+  if (!email || typeof email !== 'string' || email.trim() === '') {
+    return res.status(400).json({ error: 'A valid email is required' });
+  }
+  if (!password || typeof password !== 'string' || password.length < 8) {
+    return res.status(400).json({ error: 'Password must be at least 8 characters long' });
+  }
+  
+  // Sanitize by trimming
+  req.body.email = email.trim();
+  next();
+};
+
+const validateTaskPayload = (req, res, next) => {
+  const { title, description, status } = req.body;
+
+  if (req.method === 'POST') {
+    if (!title || typeof title !== 'string' || title.trim() === '') {
+      return res.status(400).json({ error: 'Task title is required and cannot be empty' });
+    }
+  }
+
+  if (req.method === 'PUT') {
+    if (title !== undefined && (typeof title !== 'string' || title.trim() === '')) {
+      return res.status(400).json({ error: 'Task title cannot be empty' });
+    }
+    if (status !== undefined && !['TODO', 'IN_PROGRESS', 'DONE'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid task status' });
+    }
+  }
+
+  if (description !== undefined && typeof description !== 'string') {
+    return res.status(400).json({ error: 'Description must be text' });
+  }
+
+  // Sanitize
+  if (title) req.body.title = title.trim();
+  if (description) req.body.description = description.trim();
+  
+  next();
 };
 
 /* ==========================================================================
@@ -66,11 +111,8 @@ const authenticateToken = (req, res, next) => {
    ========================================================================== */
 
 // 1. REGISTER USER
-app.post('/api/auth/register', async (req, res) => {
+app.post('/api/auth/register', validateAuthPayload, async (req, res) => {
   const { email, password } = req.body;
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Email and password are required' });
-  }
 
   try {
     const salt = await bcrypt.genSalt(10);
@@ -92,11 +134,8 @@ app.post('/api/auth/register', async (req, res) => {
 });
 
 // 2. LOGIN USER
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', validateAuthPayload, async (req, res) => {
   const { email, password } = req.body;
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Email and password are required' });
-  }
 
   try {
     const result = await pool.query('SELECT * FROM "User" WHERE email = $1', [email]);
@@ -147,11 +186,8 @@ app.get('/api/tasks', authenticateToken, async (req, res) => {
 });
 
 // 4. CREATE NEW TASK
-app.post('/api/tasks', authenticateToken, async (req, res) => {
+app.post('/api/tasks', authenticateToken, validateTaskPayload, async (req, res) => {
   const { title, description } = req.body;
-  if (!title) {
-    return res.status(400).json({ error: 'Title is required' });
-  }
 
   try {
     const result = await pool.query(
@@ -166,7 +202,7 @@ app.post('/api/tasks', authenticateToken, async (req, res) => {
 });
 
 // 5. UPDATE TASK (Title, Description, or Status)
-app.put('/api/tasks/:id', authenticateToken, async (req, res) => {
+app.put('/api/tasks/:id', authenticateToken, validateTaskPayload, async (req, res) => {
   const { id } = req.params;
   const { title, description, status } = req.body;
 

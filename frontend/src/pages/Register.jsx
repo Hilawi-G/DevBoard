@@ -54,7 +54,7 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex bg-slate-50 dark:bg-gunmetal transition-colors">
+    <div className="min-h-screen flex lg:flex-row-reverse bg-slate-50 dark:bg-gunmetal transition-colors">
       
       {/* Absolute Theme Toggle for the Auth Pages */}
       <div className="absolute top-4 right-4 z-50">
@@ -124,11 +124,20 @@ export default function Register() {
         </div>
       </div>
 
-      {/* Right Column: Welcome Banner / Intro (Hidden on smaller screens) */}
+      {/* Left Column (Now Right visually): Welcome Banner / Intro (Hidden on smaller screens) */}
       <div className="hidden lg:flex lg:flex-1 relative overflow-hidden bg-gunmetal">
         <div className="absolute inset-0 bg-gradient-to-br from-gunmetal via-dusty-denim to-ocean-mist opacity-90 z-0"></div>
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.15),transparent_50%)] z-10"></div>
         
+        {/* Swirvy SVG Divider */}
+        <svg 
+          className="absolute top-0 -right-1 h-full w-24 text-slate-50 dark:text-gunmetal z-20 transition-colors" 
+          preserveAspectRatio="none" 
+          viewBox="0 0 100 100"
+        >
+          <path fill="currentColor" d="M100,0 L100,100 L50,100 C0,75 100,25 50,0 Z" />
+        </svg>
+
         <div className="relative z-20 flex flex-col justify-center items-start p-16 w-full h-full text-white">
           <div className="p-4 bg-white/10 backdrop-blur-md rounded-2xl mb-8 border border-white/20">
              <LayoutDashboard className="w-12 h-12 text-white" />
