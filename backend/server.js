@@ -34,12 +34,25 @@ const pool = new Pool({
   },
 });
 
-// Verify Database Connection on startup
-pool.connect((err, client, release) => {
+// Verify Database Connection on startup and run migrations
+pool.connect(async (err, client, release) => {
   if (err) {
     return console.error('Error acquiring client from Neon pool:', err.stack);
   }
   console.log('Successfully connected to Neon PostgreSQL!');
+
+  // Auto-migrate: add new columns if they don't already exist
+  try {
+    await client.query(`
+      ALTER TABLE "Task"
+        ADD COLUMN IF NOT EXISTS priority  TEXT DEFAULT 'NONE',
+        ADD COLUMN IF NOT EXISTS "dueDate" DATE DEFAULT NULL;
+    `);
+    console.log('Database migration complete (priority, dueDate columns ensured).');
+  } catch (migrationErr) {
+    console.error('Migration error:', migrationErr.message);
+  }
+
   release();
 });
 
@@ -78,7 +91,10 @@ const validateAuthPayload = (req, res, next) => {
 };
 
 const validateTaskPayload = (req, res, next) => {
-  const { title, description, status } = req.body;
+  const { title, description, status, priority, dueDate } = req.body;
+
+  const validPriorities = ['NONE', 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
+  const validStatuses   = ['TODO', 'IN_PROGRESS', 'DONE'];
 
   if (req.method === 'POST') {
     if (!title || typeof title !== 'string' || title.trim() === '') {
@@ -90,9 +106,17 @@ const validateTaskPayload = (req, res, next) => {
     if (title !== undefined && (typeof title !== 'string' || title.trim() === '')) {
       return res.status(400).json({ error: 'Task title cannot be empty' });
     }
-    if (status !== undefined && !['TODO', 'IN_PROGRESS', 'DONE'].includes(status)) {
+    if (status !== undefined && !validStatuses.includes(status)) {
       return res.status(400).json({ error: 'Invalid task status' });
     }
+  }
+
+  if (priority !== undefined && !validPriorities.includes(priority)) {
+    return res.status(400).json({ error: 'Invalid priority. Must be NONE, LOW, MEDIUM, HIGH, or CRITICAL' });
+  }
+
+  if (dueDate !== undefined && dueDate !== null && isNaN(Date.parse(dueDate))) {
+    return res.status(400).json({ error: 'Invalid due date format' });
   }
 
   if (description !== undefined && typeof description !== 'string') {
@@ -187,12 +211,12 @@ app.get('/api/tasks', authenticateToken, async (req, res) => {
 
 // 4. CREATE NEW TASK
 app.post('/api/tasks', authenticateToken, validateTaskPayload, async (req, res) => {
-  const { title, description } = req.body;
+  const { title, description, priority, dueDate } = req.body;
 
   try {
     const result = await pool.query(
-      'INSERT INTO "Task" (title, description, status, "userId") VALUES ($1, $2, $3, $4) RETURNING *',
-      [title, description || '', 'TODO', req.user.id]
+      'INSERT INTO "Task" (title, description, status, priority, "dueDate", "userId") VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+      [title, description || '', 'TODO', priority || 'NONE', dueDate || null, req.user.id]
     );
     res.status(201).json(result.rows[0]);
   } catch (error) {
@@ -201,10 +225,10 @@ app.post('/api/tasks', authenticateToken, validateTaskPayload, async (req, res) 
   }
 });
 
-// 5. UPDATE TASK (Title, Description, or Status)
+// 5. UPDATE TASK (Title, Description, Status, Priority, Due Date)
 app.put('/api/tasks/:id', authenticateToken, validateTaskPayload, async (req, res) => {
   const { id } = req.params;
-  const { title, description, status } = req.body;
+  const { title, description, status, priority, dueDate } = req.body;
 
   try {
     // Check if task exists and belongs to the logged-in user
@@ -218,13 +242,15 @@ app.put('/api/tasks/:id', authenticateToken, validateTaskPayload, async (req, re
     }
 
     const task = checkTask.rows[0];
-    const updatedTitle = title !== undefined ? title : task.title;
+    const updatedTitle       = title       !== undefined ? title       : task.title;
     const updatedDescription = description !== undefined ? description : task.description;
-    const updatedStatus = status !== undefined ? status : task.status;
+    const updatedStatus      = status      !== undefined ? status      : task.status;
+    const updatedPriority    = priority    !== undefined ? priority    : task.priority;
+    const updatedDueDate     = dueDate     !== undefined ? dueDate     : task["dueDate"];
 
     const result = await pool.query(
-      'UPDATE "Task" SET title = $1, description = $2, status = $3 WHERE id = $4 AND "userId" = $5 RETURNING *',
-      [updatedTitle, updatedDescription, updatedStatus, id, req.user.id]
+      'UPDATE "Task" SET title = $1, description = $2, status = $3, priority = $4, "dueDate" = $5 WHERE id = $6 AND "userId" = $7 RETURNING *',
+      [updatedTitle, updatedDescription, updatedStatus, updatedPriority, updatedDueDate || null, id, req.user.id]
     );
 
     res.json(result.rows[0]);
