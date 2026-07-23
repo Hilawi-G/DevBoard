@@ -100,6 +100,11 @@ export default function Login() {
                 placeholder="••••••••"
                 className="w-full px-4 py-2.5 bg-slate-100 dark:bg-gunmetal border border-slate-200 dark:border-slate-600 text-slate-900 dark:text-white rounded-lg focus:outline-none focus:border-dusty-denim focus:ring-1 focus:ring-dusty-denim/30 transition-all text-sm placeholder:text-slate-400 dark:placeholder:text-slate-400"
               />
+              <div className="flex justify-end mt-1">
+                <Link to="/forgot-password" className="text-xs text-dusty-denim hover:text-ocean-mist transition-colors font-semibold">
+                  Forgot password?
+                </Link>
+              </div>
             </div>
 
             <button

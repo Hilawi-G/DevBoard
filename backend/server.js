@@ -3,6 +3,7 @@ const cors = require('cors');
 const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
@@ -47,8 +48,14 @@ pool.connect(async (err, client, release) => {
       ALTER TABLE "Task"
         ADD COLUMN IF NOT EXISTS priority  TEXT DEFAULT 'NONE',
         ADD COLUMN IF NOT EXISTS "dueDate" DATE DEFAULT NULL;
+        
+      ALTER TABLE "User"
+        ADD COLUMN IF NOT EXISTS "resetToken" TEXT DEFAULT NULL,
+        ADD COLUMN IF NOT EXISTS "resetTokenExpires" TIMESTAMPTZ DEFAULT NULL,
+        ADD COLUMN IF NOT EXISTS "displayName" TEXT DEFAULT NULL,
+        ADD COLUMN IF NOT EXISTS "avatarUrl" TEXT DEFAULT NULL;
     `);
-    console.log('Database migration complete (priority, dueDate columns ensured).');
+    console.log('Database migration complete (priority, dueDate, resetToken, displayName, avatarUrl columns ensured).');
   } catch (migrationErr) {
     console.error('Migration error:', migrationErr.message);
   }
@@ -190,6 +197,146 @@ app.post('/api/auth/login', validateAuthPayload, async (req, res) => {
   }
 });
 
+// 2a. FORGOT PASSWORD
+app.post('/api/auth/forgot-password', async (req, res) => {
+  const { email } = req.body;
+  if (!email || typeof email !== 'string' || email.trim() === '') {
+    return res.status(400).json({ error: 'A valid email is required' });
+  }
+
+  try {
+    const result = await pool.query('SELECT * FROM "User" WHERE email = $1', [email.trim()]);
+    if (result.rows.length === 0) {
+      // Don't leak whether user exists for security, just pretend success
+      return res.json({ message: 'If that email exists, a reset link has been generated.' });
+    }
+
+    const user = result.rows[0];
+    
+    // Generate token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
+    
+    // Set expiration to 1 hour from now
+    const resetTokenExpires = new Date(Date.now() + 60 * 60 * 1000);
+
+    await pool.query(
+      'UPDATE "User" SET "resetToken" = $1, "resetTokenExpires" = $2 WHERE id = $3',
+      [resetTokenHash, resetTokenExpires, user.id]
+    );
+
+    // In a real app we would email the token, but for now we'll return it in the response 
+    // or log it so it can be tested.
+    const resetUrl = `http://localhost:5173/reset-password?token=${resetToken}`;
+    console.log(`[DEV ONLY] Reset Link for ${email}: \n ${resetUrl}`);
+    
+    res.json({ 
+      message: 'If that email exists, a reset link has been generated.',
+      devLink: resetUrl // We send this purely for testing since there's no email service
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// 2b. RESET PASSWORD
+app.post('/api/auth/reset-password', async (req, res) => {
+  const { token, newPassword } = req.body;
+
+  if (!token) return res.status(400).json({ error: 'Invalid or missing token' });
+  if (!newPassword || newPassword.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+
+  try {
+    const resetTokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+    const result = await pool.query(
+      'SELECT * FROM "User" WHERE "resetToken" = $1 AND "resetTokenExpires" > NOW()',
+      [resetTokenHash]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(400).json({ error: 'Token is invalid or has expired' });
+    }
+
+    const user = result.rows[0];
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    // Update password and clear token
+    await pool.query(
+      'UPDATE "User" SET password = $1, "resetToken" = NULL, "resetTokenExpires" = NULL WHERE id = $2',
+      [hashedPassword, user.id]
+    );
+
+    res.json({ message: 'Password has been successfully reset' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+/* ==========================================================================
+   USER ROUTES (GUARDED BY JWT)
+   ========================================================================== */
+
+// 3. GET CURRENT USER PROFILE
+app.get('/api/user/me', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT id, email, "displayName", "avatarUrl" FROM "User" WHERE id = $1',
+      [req.user.id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'User not found' });
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to retrieve user profile' });
+  }
+});
+
+// 4. UPDATE CURRENT USER PROFILE
+app.put('/api/user/me', authenticateToken, async (req, res) => {
+  const { displayName, avatarUrl } = req.body;
+  try {
+    const result = await pool.query(
+      'UPDATE "User" SET "displayName" = $1, "avatarUrl" = $2 WHERE id = $3 RETURNING id, email, "displayName", "avatarUrl"',
+      [displayName || null, avatarUrl || null, req.user.id]
+    );
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to update user profile' });
+  }
+});
+
+// 5. CHANGE PASSWORD
+app.put('/api/user/change-password', authenticateToken, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  
+  if (!currentPassword || !newPassword || newPassword.length < 8) {
+    return res.status(400).json({ error: 'Valid current and new passwords are required. New password must be at least 8 characters.' });
+  }
+
+  try {
+    const result = await pool.query('SELECT password FROM "User" WHERE id = $1', [req.user.id]);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'User not found' });
+
+    const user = result.rows[0];
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) return res.status(400).json({ error: 'Incorrect current password' });
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    await pool.query('UPDATE "User" SET password = $1 WHERE id = $2', [hashedPassword, req.user.id]);
+    res.json({ message: 'Password successfully changed' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to change password' });
+  }
+});
 
 /* ==========================================================================
    TASK ROUTES (GUARDED BY JWT)

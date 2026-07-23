@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Pencil, Trash2, GripVertical, Search, CalendarDays, Flag } from 'lucide-react';
+import { Pencil, Trash2, GripVertical, Search, CalendarDays, Flag, User as UserIcon } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import ThemeToggle from '../components/ThemeToggle';
 
@@ -52,6 +52,7 @@ const LABEL_CLASS = 'block text-[10px] uppercase tracking-wider font-semibold te
 export default function Dashboard() {
   const navigate = useNavigate();
   const [tasks, setTasks] = useState([]);
+  const [userProfile, setUserProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -76,7 +77,23 @@ export default function Dashboard() {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) { navigate('/login'); return; }
-    fetchTasks();
+    
+    // Fetch profile and tasks simultaneously
+    Promise.all([
+      axios.get('http://localhost:5000/api/user/me', { headers: { Authorization: `Bearer ${token}` } }),
+      axios.get('http://localhost:5000/api/tasks', { headers: { Authorization: `Bearer ${token}` } })
+    ])
+    .then(([profileRes, tasksRes]) => {
+      setUserProfile(profileRes.data);
+      setTasks(tasksRes.data.sort((a, b) => a.id - b.id));
+      setError('');
+    })
+    .catch(err => {
+      handleApiError(err, 'Failed to fetch data from server.');
+    })
+    .finally(() => {
+      setIsLoading(false);
+    });
   }, [navigate]);
 
   const getHeaders = () => {
@@ -96,14 +113,11 @@ export default function Dashboard() {
 
   const fetchTasks = async () => {
     try {
-      setIsLoading(true);
       const response = await axios.get('http://localhost:5000/api/tasks', getHeaders());
       setTasks(response.data.sort((a, b) => a.id - b.id));
       setError('');
     } catch (err) {
       handleApiError(err, 'Failed to fetch tasks from server.');
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -214,6 +228,25 @@ export default function Dashboard() {
             <p className="text-sm text-slate-500 dark:text-slate-300 mt-1">Track and progress tasks dynamically across your team</p>
           </div>
           <div className="flex items-center gap-3 w-full sm:w-auto">
+            {userProfile && (
+              <button 
+                onClick={() => navigate('/settings')}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                title="Account Settings"
+              >
+                {userProfile.avatarUrl ? (
+                  <img src={userProfile.avatarUrl} alt="Avatar" className="w-8 h-8 rounded-full object-cover border border-slate-300 dark:border-slate-600" />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-dusty-denim flex items-center justify-center text-white font-bold text-xs">
+                    {(userProfile.displayName || userProfile.email).charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <span className="text-sm font-semibold hidden sm:inline-block">
+                  {userProfile.displayName || userProfile.email.split('@')[0]}
+                </span>
+              </button>
+            )}
+
             <button
               onClick={() => setIsCreating(!isCreating)}
               className="flex-1 sm:flex-none px-4 py-2 bg-dusty-denim hover:bg-ocean-mist text-white font-medium text-sm rounded-lg transition-colors shadow-sm cursor-pointer"
